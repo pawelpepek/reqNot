@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="ReqNot.FakeDevice/ReqNot.FakeDevice.csproj" />
+  <Project Path="ReqNot.WebApi/ReqNot.WebApi.csproj" />
+</Solution>
