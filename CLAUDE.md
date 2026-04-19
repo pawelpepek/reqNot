@@ -73,5 +73,19 @@ npm run lint        # ESLint
 ## Production Deployment (Raspberry Pi / nginx)
 
 - Target: nginx reverse proxy on Raspberry Pi, local network
-- Must create `appsettings.Production.json` with real device address (gitignored)
-- Set `ASPNETCORE_ENVIRONMENT=Production` in the systemd service or nginx config
+- App runs on `http://localhost:5000` behind nginx (`nginx/reqnot.conf`)
+- Managed by systemd (`systemd/reqnot-webapi.service`), deploy to `/opt/reqnot/webapi/`
+
+Must create `ReqNot.WebApi/appsettings.Production.json` manually (gitignored):
+```json
+{
+  "DeviceAddress": "http://192.168.8.122",
+  "Firebase": {
+    "CredentialPath": "/opt/reqnot/firebase-serviceaccount.json"
+  }
+}
+```
+
+Firebase service account JSON (`firebase-serviceaccount.json`) must be placed at the path specified in `CredentialPath`. Download it from Firebase Console → Project Settings → Service Accounts.
+
+Mobile app: `google-services.json` (Android) and `GoogleService-Info.plist` (iOS) must be placed in `reqNot/` before building with EAS. Push notifications require EAS Build — they do not work in Expo Go.

@@ -1,41 +1,38 @@
 var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
-{
     app.MapOpenApi();
-}
 
-app.UseHttpsRedirection();
+bool isOn = true;
+object stateLock = new();
 
-var summaries = new[]
+app.MapGet("/API/RunFunction", (string name) =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+    if (name != "CurrentWorkParameters")
+        return Results.BadRequest(new { Message = "Unknown function" });
 
-app.MapGet("/weatherforecast", () =>
+    bool currentState;
+    lock (stateLock) { currentState = isOn; }
+
+    var values = new object[] {
+        currentState ? 1 : 0, 300, 22.2, 90, 90, 100, 100, 43, 500, 0, 8, 0, 0, 0, 0, 4,
+        80, 80, 25, 100, 80, 100, 20, 70, 30, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 22.5, 22.3, 22.2, 22.5, 0.0, 0.0, 0.0,
+        0.0, 30, 40, 24, 25, 22, 0, 3, 2, 0, 0, 0, 0, 20, 25, 0, 0, 0, 0, 12, 13, 89, 540,
+        530, 0, 87, 95, 41, 7, 13, 30, 29, 0, 0, 0, 0, 0, 60000, 12936
+    };
+
+    return Results.Ok(new { CurrentWorkParametersResult = true, Values = values });
+});
+
+app.MapPut("/toggle", () =>
 {
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+    bool newState;
+    lock (stateLock) { isOn = !isOn; newState = isOn; }
+    return Results.Ok(new { isOn = newState });
+});
 
 app.Run();
-
-internal record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

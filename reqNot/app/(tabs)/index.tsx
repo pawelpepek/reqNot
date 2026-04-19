@@ -1,98 +1,153 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { useDeviceStatus } from '@/hooks/useDeviceStatus';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const { isOn, isLoading, check, lastChecked, error } = useDeviceStatus();
+  const { user, loading: authLoading, signIn, signOut } = useAuth();
+  const [authBusy, setAuthBusy] = useState(false);
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  function renderIcon() {
+    if (isOn === null) {
+      return <Ionicons name="power" size={120} color="#9ca3af" />;
+    }
+    return isOn
+      ? <Ionicons name="power" size={120} color="#22c55e" />
+      : <Ionicons name="power" size={120} color="#ef4444" />;
+  }
+
+  const handleSignIn = async () => {
+    setAuthBusy(true);
+    try {
+      await signIn();
+    } catch {
+      Alert.alert('Błąd logowania', 'Nie udało się zalogować. Spróbuj ponownie.');
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    setAuthBusy(true);
+    try {
+      await signOut();
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  function renderAuthButton() {
+    if (authLoading || authBusy) {
+      return <ActivityIndicator size="small" color="#6b7280" style={styles.authSpinner} />;
+    }
+    if (user) {
+      return (
+        <View style={styles.authRow}>
+          <Text style={styles.authEmail} numberOfLines={1}>{user.email}</Text>
+          <Pressable style={styles.authButton} onPress={handleSignOut}>
+            <Text style={styles.authButtonText}>Wyloguj</Text>
+          </Pressable>
+        </View>
+      );
+    }
+    return (
+      <Pressable style={styles.authButton} onPress={handleSignIn}>
+        <Text style={styles.authButtonText}>Zaloguj przez Google</Text>
+      </Pressable>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.center}>
+        {isLoading
+          ? <ActivityIndicator size="large" color="#6b7280" />
+          : renderIcon()
+        }
+        {error
+          ? <Text style={styles.error}>{error}</Text>
+          : <Text style={styles.lastChecked}>
+              Ostatnie sprawdzenie:{' '}
+              {lastChecked?.toLocaleString('pl-PL', { dateStyle: 'short', timeStyle: 'short' }) ?? '–'}
+            </Text>
+        }
+      </View>
+      <View style={styles.buttons}>
+        <Pressable
+          style={[styles.button, isLoading && styles.buttonDisabled]}
+          onPress={check}
+          disabled={isLoading}>
+          <Text style={styles.buttonText}>Sprawdź</Text>
+        </Pressable>
+        {renderAuthButton()}
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+    justifyContent: 'space-between',
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  buttons: {
+    gap: 12,
+  },
+  button: {
+    backgroundColor: '#3b82f6',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  lastChecked: {
+    marginTop: 16,
+    fontSize: 13,
+    color: '#6b7280',
+  },
+  error: {
+    marginTop: 16,
+    fontSize: 13,
+    color: '#ef4444',
+  },
+  buttonText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  authButton: {
+    backgroundColor: '#f3f4f6',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  authButtonText: {
+    color: '#374151',
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  authRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  authEmail: {
+    flex: 1,
+    fontSize: 13,
+    color: '#6b7280',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  authSpinner: {
+    paddingVertical: 14,
   },
 });

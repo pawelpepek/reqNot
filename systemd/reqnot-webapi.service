@@ -1,0 +1,16 @@
+[Unit]
+Description=ReqNot WebApi
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/reqnot
+ExecStart=/usr/bin/dotnet /opt/reqnot/ReqNot.WebApi.dll
+Restart=always
+RestartSec=10
+SyslogIdentifier=reqnot-webapi
+User=www-data
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=ASPNETCORE_URLS=http://localhost:5000
+
+[Install]
+WantedBy=multi-user.target

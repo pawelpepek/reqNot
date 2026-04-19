@@ -1,41 +1,53 @@
+using FirebaseAdmin;
+using Google.Apis.Auth.OAuth2;
+using Microsoft.AspNetCore.HttpOverrides;
+using ReqNot.WebApi.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+builder.Services.AddHttpClient();
+
+builder.Services.AddSingleton<DeviceStateService>();
+builder.Services.AddSingleton<DeviceChecker>();
+builder.Services.AddSingleton<FirestoreService>();
+builder.Services.AddSingleton<IFcmSender, FcmSender>();
+builder.Services.AddHostedService<DevicePollingService>();
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
+var credentialPath = builder.Configuration["Firebase:CredentialPath"];
+if (!string.IsNullOrWhiteSpace(credentialPath))
+{
+    FirebaseApp.Create(new AppOptions
+    {
+        Credential = GoogleCredential.FromFile(credentialPath)
+    });
+}
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+app.UseForwardedHeaders();
+
 if (app.Environment.IsDevelopment())
-{
     app.MapOpenApi();
-}
 
-app.UseHttpsRedirection();
-
-var summaries = new[]
+app.MapGet("/status", (DeviceStateService stateService) =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+    var (isOn, lastChecked) = stateService.GetState();
+    return Results.Ok(new { isOn, lastChecked });
+});
 
-app.MapGet("/weatherforecast", () =>
+app.MapGet("/check", async (DeviceChecker checker, DeviceStateService stateService) =>
 {
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+    var isOn = await checker.CheckAsync();
+    stateService.Update(isOn);
+    return Results.Ok(new { isOn });
+});
 
 app.Run();
-
-internal record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

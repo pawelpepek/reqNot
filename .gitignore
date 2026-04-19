@@ -416,3 +416,13 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# ReqNot secrets
+**/appsettings.Production.json
+reqNot/GoogleService-Info.plist
+*serviceaccount*.json
+firebase-*.json
+/reqNot/google-services.json
+/ReqNot.WebApi/appsettings.Development.json
+/.claude/settings.local.json
+/ReqNot.WebApi/appsettings.Development.json
