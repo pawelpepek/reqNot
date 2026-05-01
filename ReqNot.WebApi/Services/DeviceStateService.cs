@@ -1,22 +1,24 @@
+using ReqNot.WebApi.Models;
+
 namespace ReqNot.WebApi.Services;
 
 public class DeviceStateService
 {
     private readonly object _lock = new();
-    private bool _isOn;
+    private DeviceStatus _status = DeviceStatus.Unknown;
     private DateTime _lastChecked = DateTime.MinValue;
 
-    public void Update(bool isOn)
+    public void Update(DeviceStatus status)
     {
         lock (_lock)
         {
-            _isOn = isOn;
+            _status = status;
             _lastChecked = DateTime.UtcNow;
         }
     }
 
-    public (bool IsOn, DateTime LastChecked) GetState()
+    public (DeviceStatus Status, DateTime LastChecked) GetState()
     {
-        lock (_lock) return (_isOn, _lastChecked);
+        lock (_lock) return (_status, _lastChecked);
     }
 }

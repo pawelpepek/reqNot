@@ -1,6 +1,7 @@
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using Microsoft.AspNetCore.HttpOverrides;
+using ReqNot.WebApi.Models;
 using ReqNot.WebApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -39,15 +40,24 @@ if (app.Environment.IsDevelopment())
 
 app.MapGet("/status", (DeviceStateService stateService) =>
 {
-    var (isOn, lastChecked) = stateService.GetState();
-    return Results.Ok(new { isOn, lastChecked });
+    var (status, lastChecked) = stateService.GetState();
+    return Results.Ok(new { status, lastChecked });
 });
 
 app.MapGet("/check", async (DeviceChecker checker, DeviceStateService stateService) =>
 {
-    var isOn = await checker.CheckAsync();
-    stateService.Update(isOn);
-    return Results.Ok(new { isOn });
+    try
+    {
+        var isOn = await checker.CheckAsync();
+        var status = isOn ? DeviceStatus.On : DeviceStatus.Off;
+        stateService.Update(status);
+        return Results.Ok(new { status });
+    }
+    catch
+    {
+        stateService.Update(DeviceStatus.Unknown);
+        return Results.Ok(new { status = DeviceStatus.Unknown });
+    }
 });
 
 app.Run();

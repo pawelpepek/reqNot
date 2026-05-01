@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
+import { DeviceStatus } from '@/constants/DeviceStatus';
 
 const docRef = firestore().collection('reqNot').doc('actual');
 
 export function useDeviceStatus() {
-  const [isOn, setIsOn] = useState<boolean | null>(null);
+  const [isOn, setIsOn] = useState<DeviceStatus | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +31,8 @@ export function useDeviceStatus() {
           setError(null);
           const data = snapshot.data();
           if (!data) return;
-          if (typeof data.works === 'boolean') setIsOn(data.works);
+          if (typeof data.works === 'number') setIsOn(data.works as DeviceStatus);
+          else if (typeof data.works === 'boolean') setIsOn(data.works ? DeviceStatus.On : DeviceStatus.Off);
           if (data.check === false) setIsChecking(false);
           if (data.lastChecked && typeof data.lastChecked.toDate === 'function') {
             setLastChecked(data.lastChecked.toDate());

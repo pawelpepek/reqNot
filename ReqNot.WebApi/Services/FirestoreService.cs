@@ -1,4 +1,5 @@
 using Google.Cloud.Firestore;
+using ReqNot.WebApi.Models;
 
 namespace ReqNot.WebApi.Services;
 
@@ -22,12 +23,12 @@ public class FirestoreService
         _docRef = db.Collection("reqNot").Document("actual");
     }
 
-    public async Task UpdateWorksAsync(bool works)
+    public async Task UpdateWorksAsync(DeviceStatus status)
     {
         await _docRef.SetAsync(
             new Dictionary<string, object>
             {
-                ["works"] = works,
+                ["works"] = (int)status,
                 ["lastChecked"] = Timestamp.GetCurrentTimestamp()
             },
             SetOptions.MergeAll);

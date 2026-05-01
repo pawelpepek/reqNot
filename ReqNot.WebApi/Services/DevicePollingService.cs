@@ -1,3 +1,5 @@
+using ReqNot.WebApi.Models;
+
 namespace ReqNot.WebApi.Services;
 
 public class DevicePollingService : BackgroundService
@@ -36,13 +38,17 @@ public class DevicePollingService : BackgroundService
             {
                 _logger.LogInformation("Check requested via Firestore.");
                 var isOn = await _deviceChecker.CheckAsync();
-                _deviceStateService.Update(isOn);
-                await _firestoreService.UpdateWorksAsync(isOn);
+                var status = isOn ? DeviceStatus.On : DeviceStatus.Off;
+                _deviceStateService.Update(status);
+                await _firestoreService.UpdateWorksAsync(status);
                 await _firestoreService.ResetCheckAsync();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error handling Firestore check request.");
+                _deviceStateService.Update(DeviceStatus.Unknown);
+                try { await _firestoreService.UpdateWorksAsync(DeviceStatus.Unknown); } catch { }
+                try { await _firestoreService.ResetCheckAsync(); } catch { }
             }
         });
 
@@ -66,10 +72,11 @@ public class DevicePollingService : BackgroundService
         try
         {
             var isOn = await _deviceChecker.CheckAsync();
-            _deviceStateService.Update(isOn);
-            await _firestoreService.UpdateWorksAsync(isOn);
+            var status = isOn ? DeviceStatus.On : DeviceStatus.Off;
+            _deviceStateService.Update(status);
+            await _firestoreService.UpdateWorksAsync(status);
 
-            if (!isOn)
+            if (status == DeviceStatus.Off)
             {
                 _logger.LogWarning("Device is off, sending push notification.");
                 await _fcmSender.SendDeviceOffNotificationAsync();
@@ -78,6 +85,8 @@ public class DevicePollingService : BackgroundService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error polling device.");
+            _deviceStateService.Update(DeviceStatus.Unknown);
+            try { await _firestoreService.UpdateWorksAsync(DeviceStatus.Unknown); } catch { }
         }
     }
 }

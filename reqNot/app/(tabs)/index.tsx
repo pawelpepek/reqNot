@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useDeviceStatus } from '@/hooks/useDeviceStatus';
 import { useAuth } from '@/hooks/useAuth';
+import { DeviceStatus } from '@/constants/DeviceStatus';
 
 export default function HomeScreen() {
   const { isOn, isLoading, check, lastChecked, error } = useDeviceStatus();
@@ -10,12 +11,10 @@ export default function HomeScreen() {
   const [authBusy, setAuthBusy] = useState(false);
 
   function renderIcon() {
-    if (isOn === null) {
-      return <Ionicons name="power" size={120} color="#9ca3af" />;
-    }
-    return isOn
-      ? <Ionicons name="power" size={120} color="#22c55e" />
-      : <Ionicons name="power" size={120} color="#ef4444" />;
+    if (isOn === null)                return <Ionicons name="power" size={120} color="#9ca3af" />;
+    if (isOn === DeviceStatus.Unknown) return <Ionicons name="help-circle-outline" size={120} color="#f59e0b" />;
+    if (isOn === DeviceStatus.On)      return <Ionicons name="power" size={120} color="#22c55e" />;
+    return                                    <Ionicons name="power" size={120} color="#ef4444" />;
   }
 
   const handleSignIn = async () => {
