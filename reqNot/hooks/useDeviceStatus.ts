@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import firestore from '@react-native-firebase/firestore';
+import auth from '@react-native-firebase/auth';
 
 const docRef = firestore().collection('reqNot').doc('actual');
 
@@ -10,23 +11,42 @@ export function useDeviceStatus() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = docRef.onSnapshot(
-      (snapshot) => {
-        setError(null);
-        const data = snapshot.data();
-        if (!data) return;
-        if (typeof data.works === 'boolean') setIsOn(data.works);
-        if (data.check === false) setIsChecking(false);
-        if (data.lastChecked && typeof data.lastChecked.toDate === 'function') {
-          setLastChecked(data.lastChecked.toDate());
-        }
-      },
-      () => {
+    let firestoreUnsub: (() => void) | null = null;
+
+    const authUnsub = auth().onAuthStateChanged((user) => {
+      if (firestoreUnsub) {
+        firestoreUnsub();
+        firestoreUnsub = null;
+      }
+
+      if (!user) {
         setError('Brak dostępu — zaloguj się');
         setIsChecking(false);
+        return;
       }
-    );
-    return unsubscribe;
+
+      firestoreUnsub = docRef.onSnapshot(
+        (snapshot) => {
+          setError(null);
+          const data = snapshot.data();
+          if (!data) return;
+          if (typeof data.works === 'boolean') setIsOn(data.works);
+          if (data.check === false) setIsChecking(false);
+          if (data.lastChecked && typeof data.lastChecked.toDate === 'function') {
+            setLastChecked(data.lastChecked.toDate());
+          }
+        },
+        () => {
+          setError('Brak dostępu — zaloguj się');
+          setIsChecking(false);
+        }
+      );
+    });
+
+    return () => {
+      authUnsub();
+      if (firestoreUnsub) firestoreUnsub();
+    };
   }, []);
 
   const check = useCallback(async () => {
