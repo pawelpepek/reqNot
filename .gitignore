@@ -417,6 +417,9 @@ FodyWeavers.xsd
 *.msm
 *.msp
 
+# Deploy settings
+deploy/deploy.settings.json
+
 # ReqNot secrets
 **/appsettings.Production.json
 reqNot/GoogleService-Info.plist
