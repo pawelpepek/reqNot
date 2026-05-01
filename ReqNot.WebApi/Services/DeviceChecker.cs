@@ -31,7 +31,7 @@ public class DeviceChecker
         var url = $"{deviceAddress}/API/RunFunction?name=CurrentWorkParameters";
         _logger.LogInformation("Polling device at {Url}", url);
 
-        var response = await client.GetAsync(url);
+        using var response = await client.GetAsync(url);
         response.EnsureSuccessStatusCode();
 
         var json = await response.Content.ReadAsStringAsync();
@@ -39,6 +39,10 @@ public class DeviceChecker
 
         var root = doc.RootElement;
         var values = root.TryGetProperty("Values", out var v) ? v : root.GetProperty("values");
+
+        if (values.GetArrayLength() < 5)
+            throw new InvalidOperationException($"Unexpected Values array length: {values.GetArrayLength()}");
+
         var statusValue = values[0].GetInt32();
         var value3 = values[3].GetDouble();
         var value4 = values[4].GetDouble();
@@ -56,11 +60,13 @@ public class DeviceChecker
             {
                 ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
             };
-            return new HttpClient(handler);
+            return new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(15) };
         }
         else
         {
-            return _httpClientFactory.CreateClient();
+            var client = _httpClientFactory.CreateClient();
+            client.Timeout = TimeSpan.FromSeconds(15);
+            return client;
         }
     }
 }

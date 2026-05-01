@@ -22,13 +22,5 @@ export function usePushNotifications() {
     }
 
     register();
-
-    const foregroundSub = Notifications.addNotificationReceivedListener(() => {});
-    const responseSub = Notifications.addNotificationResponseReceivedListener(() => {});
-
-    return () => {
-      foregroundSub.remove();
-      responseSub.remove();
-    };
   }, []);
 }

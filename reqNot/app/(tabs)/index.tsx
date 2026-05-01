@@ -33,6 +33,8 @@ export default function HomeScreen() {
     setAuthBusy(true);
     try {
       await signOut();
+    } catch {
+      Alert.alert('Błąd', 'Nie udało się wylogować. Spróbuj ponownie.');
     } finally {
       setAuthBusy(false);
     }
